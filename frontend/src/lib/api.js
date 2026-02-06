@@ -9,7 +9,7 @@ const nocoApi = axios.create({
   headers: { 'xc-token': API_TOKEN }
 });
 
-// ၁။ စာအုပ်စာရင်းများ (v1 အတိုင်း ထားရှိပါသည်)
+// ၁။ စာအုပ်စာရင်းများ ခေါ်ယူခြင်း
 export const fetchBooks = async () => {
   try {
     const response = await nocoApi.get(`/api/v1/db/data/v1/p84l8ttjqwnrch0/books`);
@@ -20,65 +20,79 @@ export const fetchBooks = async () => {
   }
 };
 
-// ၂။ အော်ဒါတင်ခြင်း (POST - id စာလုံးသေးဖြင့် ညှိထားသည်)
+// ၂။ အော်ဒါတင်ခြင်း (POST - ပုံတင်ခြင်းနှင့် Record တည်ဆောက်ခြင်း)
 export const submitOrder = async (orderData) => {
   try {
+    // A. Screenshot ကို Storage ထဲအရင် Upload တင်မယ်
     const fileFormData = new FormData();
     fileFormData.append('file', orderData.screenshot);
+
     const uploadRes = await fetch(`${BASE_URL}/api/v1/db/storage/upload`, {
       method: 'POST',
       headers: { 'xc-token': API_TOKEN },
       body: fileFormData
     });
-    const uploadData = await uploadRes.json();
-    const filePath = uploadData[0].path;
 
+    if (!uploadRes.ok) {
+      const errorMsg = await uploadRes.text();
+      throw new Error(`Upload Failed: ${errorMsg}`);
+    }
+
+    const uploadData = await uploadRes.json();
+    
+    // B. NocoDB Attachment Field အတွက် JSON format ပြင်ဆင်ခြင်း
+    // NocoDB က ပုံကို Array structure [ { "path": "..." } ] အနေနဲ့ သိမ်းတာပါ
+    const screenshotPayload = JSON.stringify(uploadData);
+
+    // C. Table ထဲသို့ Record အသစ်ထည့်ခြင်း
     const response = await nocoApi.post(`/api/v2/tables/${TABLE_ID}/records`, {
       customer_name: orderData.name,
       phone: orderData.phone,
       payment_method: orderData.paymentMethod,
-      screenshot: filePath,
+      screenshot: screenshotPayload, 
       book_id: orderData.book_id,
       status: 'pending',
       amount: Number(orderData.amount) || 0,
-      customer_email: 'test@example.com'
+      customer_email: orderData.email || 'test@example.com'
     });
 
     return response.data;
   } catch (error) {
-    console.error("Order Submit Error:", error.response?.data || error.message);
+    // Console မှာ error အပြည့်အစုံကို ထုတ်ပြမယ် (Debug လုပ်ဖို့)
+    console.error("Order Submit Details:", error.response?.data || error.message);
     throw error;
   }
 };
 
-// ၃။ အော်ဒါအားလုံးကို ပြန်ခေါ်ခြင်း (sort: '-id' ဟု ပြောင်းလဲထားသည်)
+// ၃။ အော်ဒါအားလုံးကို ပြန်ခေါ်ခြင်း (Admin Dashboard အတွက်)
 export const fetchOrders = async () => {
   try {
     const response = await nocoApi.get(`/api/v2/tables/${TABLE_ID}/records`, {
       params: { 
-        sort: '-id', // id စာလုံးသေးဖြင့် ပြင်လိုက်ပါပြီ
-        limit: 25 
+        sort: '-id', 
+        limit: 50 
       }
     });
     
-    // v2 records array ကို ဆွဲထုတ်ခြင်း
-    const data = response.data.list || response.data.records || response.data || [];
-    return Array.isArray(data) ? data : (data.list || []);
+    // NocoDB v2 က list ထဲမှာ data ပြန်ပေးပါတယ်
+    return response.data.list || [];
   } catch (error) {
     console.error("Orders Fetch Error:", error.response?.data || error.message);
     return [];
   }
 };
 
-// ၄။ အော်ဒါ Status ပြောင်းလဲခြင်း
+// ၄။ အော်ဒါ Status ပြောင်းလဲခြင်း (Approve/Reject)
 export const updateOrderStatus = async (id, status) => {
   try {
-    // PATCH တွင်လည်း id စာလုံးသေးကို သုံးရပါမည်
-    await nocoApi.patch(`/api/v2/tables/${TABLE_ID}/records`, {
+    // NocoDB v2 PATCH record (id နဲ့ status ကို ပို့ပေးရုံပါပဲ)
+    const response = await nocoApi.patch(`/api/v2/tables/${TABLE_ID}/records`, {
       id: id, 
       status: status
     });
+    return response.data;
   } catch (error) {
     console.error("Update Status Error:", error.response?.data || error.message);
+    throw error;
   }
 };

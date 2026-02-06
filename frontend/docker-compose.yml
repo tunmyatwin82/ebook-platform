@@ -1,7 +1,12 @@
 services:
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        - NEXT_PUBLIC_ADMIN_PASSWORD=${NEXT_PUBLIC_ADMIN_PASSWORD}
     container_name: ebook-frontend
+    env_file:
+      - .env.local
     networks:
       - ebook-net
 
