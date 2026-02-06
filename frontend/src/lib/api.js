@@ -17,10 +17,9 @@ export const fetchBooks = async () => {
   }
 };
 
-// ၂။ အော်ဒါတင်ခြင်း (Amount ပြဿနာကို ဖြေရှင်းထားသည်)
+// ၂။ အော်ဒါတင်ခြင်း (Customer ဘက်ခြမ်း)
 export const submitOrder = async (orderData) => {
   try {
-    // Screenshot ပုံကို NocoDB Storage ထဲ အရင်တင်ခြင်း
     const fileFormData = new FormData();
     fileFormData.append('file', orderData.screenshot);
 
@@ -34,7 +33,6 @@ export const submitOrder = async (orderData) => {
     const uploadData = await uploadRes.json();
     const filePath = uploadData[0].path;
 
-    // အချက်အလက်များကို orders table ထဲသို့ ပို့ခြင်း
     const response = await fetch(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders`, {
       method: 'POST',
       headers: {
@@ -48,21 +46,47 @@ export const submitOrder = async (orderData) => {
         screenshot: [{ path: filePath }],
         book_id: orderData.book_id,
         status: 'pending',
-        // အရေးကြီးဆုံးအချက် - URL မှလာသော price ကို Number အဖြစ်ပြောင်း၍ သိမ်းခြင်း
         amount: Number(orderData.amount) || 0, 
         customer_email: 'test@example.com'
       })
     });
 
-    if (!response.ok) {
-      const errorDetail = await response.json();
-      console.error("NocoDB Response Error:", errorDetail);
-      throw new Error("Order Submission Failed");
-    }
-
+    if (!response.ok) throw new Error("Order Submission Failed");
     return await response.json();
   } catch (error) {
     console.error("API Error:", error);
+    throw error;
+  }
+};
+
+// -----------------------------------------------------------
+// Admin Dashboard အတွက် အသစ်ထည့်သွင်းထားသော Function များ
+// -----------------------------------------------------------
+
+// ၃။ အော်ဒါအားလုံးကို ပြန်ခေါ်ခြင်း (Admin အတွက်)
+export const fetchOrders = async () => {
+  try {
+    // sort=-Id က အော်ဒါအသစ်တွေကို ထိပ်ဆုံးကနေ ပြပေးမှာပါ
+    const response = await axios.get(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders?sort=-Id`, {
+      headers: { 'xc-token': API_TOKEN }
+    });
+    return response.data.list || [];
+  } catch (error) {
+    console.error("Orders ခေါ်ယူ၍မရပါ:", error);
+    return [];
+  }
+};
+
+// ၄။ အော်ဒါ Status ကို Update လုပ်ခြင်း (Approve/Reject လုပ်ရန်)
+export const updateOrderStatus = async (id, status) => {
+  try {
+    const response = await axios.patch(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders/${id}`, 
+      { status: status },
+      { headers: { 'xc-token': API_TOKEN } }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Status Update လုပ်၍မရပါ:", error);
     throw error;
   }
 };
