@@ -1,0 +1,14 @@
+services:
+  ebook-order:
+    build: .
+    container_name: ebook-order
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    networks:
+      - ebook-net
+
+networks:
+  ebook-net:
+    external: true

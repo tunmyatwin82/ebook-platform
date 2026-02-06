@@ -1,0 +1,10 @@
+services:
+  frontend:
+    build: .
+    container_name: ebook-frontend
+    networks:
+      - ebook-net
+
+networks:
+  ebook-net:
+    external: true
