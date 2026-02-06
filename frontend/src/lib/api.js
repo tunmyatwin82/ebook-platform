@@ -2,14 +2,17 @@ import axios from 'axios';
 
 const BASE_URL = 'https://db.drtunmyatwin.com';
 const API_TOKEN = 'jk9vhwA4eEU_TO6w1hlS4dQD6KJpzLsLR-H6dFEZ'; 
-const PROJECT_ID = 'p84l8ttjqwnrch0';
+const TABLE_ID = 'mc5yx33qmli9mwu'; 
 
-// ၁။ စာအုပ်စာရင်းများ ခေါ်ယူခြင်း
+const nocoApi = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'xc-token': API_TOKEN }
+});
+
+// ၁။ စာအုပ်စာရင်းများ (v1 အတိုင်း ထားရှိပါသည်)
 export const fetchBooks = async () => {
   try {
-    const response = await axios.get(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/books`, {
-      headers: { 'xc-token': API_TOKEN }
-    });
+    const response = await nocoApi.get(`/api/v1/db/data/v1/p84l8ttjqwnrch0/books`);
     return response.data.list || [];
   } catch (error) {
     console.error("စာအုပ်များ ခေါ်ယူ၍မရပါ:", error);
@@ -17,76 +20,65 @@ export const fetchBooks = async () => {
   }
 };
 
-// ၂။ အော်ဒါတင်ခြင်း (Customer ဘက်ခြမ်း)
+// ၂။ အော်ဒါတင်ခြင်း (POST - id စာလုံးသေးဖြင့် ညှိထားသည်)
 export const submitOrder = async (orderData) => {
   try {
     const fileFormData = new FormData();
     fileFormData.append('file', orderData.screenshot);
-
     const uploadRes = await fetch(`${BASE_URL}/api/v1/db/storage/upload`, {
       method: 'POST',
       headers: { 'xc-token': API_TOKEN },
       body: fileFormData
     });
-
-    if (!uploadRes.ok) throw new Error("Screenshot upload failed");
     const uploadData = await uploadRes.json();
     const filePath = uploadData[0].path;
 
-    const response = await fetch(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xc-token': API_TOKEN
-      },
-      body: JSON.stringify({
-        customer_name: orderData.name,
-        phone: orderData.phone,
-        payment_method: orderData.paymentMethod,
-        screenshot: [{ path: filePath }],
-        book_id: orderData.book_id,
-        status: 'pending',
-        amount: Number(orderData.amount) || 0, 
-        customer_email: 'test@example.com'
-      })
+    const response = await nocoApi.post(`/api/v2/tables/${TABLE_ID}/records`, {
+      customer_name: orderData.name,
+      phone: orderData.phone,
+      payment_method: orderData.paymentMethod,
+      screenshot: filePath,
+      book_id: orderData.book_id,
+      status: 'pending',
+      amount: Number(orderData.amount) || 0,
+      customer_email: 'test@example.com'
     });
 
-    if (!response.ok) throw new Error("Order Submission Failed");
-    return await response.json();
+    return response.data;
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("Order Submit Error:", error.response?.data || error.message);
     throw error;
   }
 };
 
-// -----------------------------------------------------------
-// Admin Dashboard အတွက် အသစ်ထည့်သွင်းထားသော Function များ
-// -----------------------------------------------------------
-
-// ၃။ အော်ဒါအားလုံးကို ပြန်ခေါ်ခြင်း (Admin အတွက်)
+// ၃။ အော်ဒါအားလုံးကို ပြန်ခေါ်ခြင်း (sort: '-id' ဟု ပြောင်းလဲထားသည်)
 export const fetchOrders = async () => {
   try {
-    // sort=-Id က အော်ဒါအသစ်တွေကို ထိပ်ဆုံးကနေ ပြပေးမှာပါ
-    const response = await axios.get(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders?sort=-Id`, {
-      headers: { 'xc-token': API_TOKEN }
+    const response = await nocoApi.get(`/api/v2/tables/${TABLE_ID}/records`, {
+      params: { 
+        sort: '-id', // id စာလုံးသေးဖြင့် ပြင်လိုက်ပါပြီ
+        limit: 25 
+      }
     });
-    return response.data.list || [];
+    
+    // v2 records array ကို ဆွဲထုတ်ခြင်း
+    const data = response.data.list || response.data.records || response.data || [];
+    return Array.isArray(data) ? data : (data.list || []);
   } catch (error) {
-    console.error("Orders ခေါ်ယူ၍မရပါ:", error);
+    console.error("Orders Fetch Error:", error.response?.data || error.message);
     return [];
   }
 };
 
-// ၄။ အော်ဒါ Status ကို Update လုပ်ခြင်း (Approve/Reject လုပ်ရန်)
+// ၄။ အော်ဒါ Status ပြောင်းလဲခြင်း
 export const updateOrderStatus = async (id, status) => {
   try {
-    const response = await axios.patch(`${BASE_URL}/api/v1/db/data/v1/${PROJECT_ID}/orders/${id}`, 
-      { status: status },
-      { headers: { 'xc-token': API_TOKEN } }
-    );
-    return response.data;
+    // PATCH တွင်လည်း id စာလုံးသေးကို သုံးရပါမည်
+    await nocoApi.patch(`/api/v2/tables/${TABLE_ID}/records`, {
+      id: id, 
+      status: status
+    });
   } catch (error) {
-    console.error("Status Update လုပ်၍မရပါ:", error);
-    throw error;
+    console.error("Update Status Error:", error.response?.data || error.message);
   }
 };
