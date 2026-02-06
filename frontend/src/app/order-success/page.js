@@ -42,14 +42,28 @@ export default function OrderSuccess() {
         </h1>
         
         <p style={{ color: '#4b5563', lineHeight: '1.6', marginBottom: '32px' }}>
-          ဝယ်ယူအားပေးမှုကို ကျေးဇူးတင်ပါသည်။ သင်၏ ငွေလွှဲပြေစာကို ကျွန်ုပ်တို့ လက်ခံရရှိပါပြီ။ 
-          Admin မှ စစ်ဆေးပြီးနောက် စာအုပ်ဖတ်ရန် Link ကို သင်၏ Viber သို့မဟုတ် ဖုန်းနံပါတ်သို့ (၂၄) နာရီအတွင်း ပေးပို့ပေးပါမည်။
+          ဝယ်ယူအားပေးမှုကို ကျေးဇူးတင်ပါသည်။ သင်၏ ငွေလွှဲပြေစာကို ကျွန်ုပ်တို့ လက်ခံရရှိပါပြီ။ <br/>
+          Admin မှ စစ်ဆေးပြီးပါက အောက်ပါ <b>"အော်ဒါအခြေအနေစစ်ဆေးရန်"</b> ခလုတ်တွင် စာအုပ်ကို တိုက်ရိုက် Download ရယူနိုင်ပါသည်။
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Link href="/" style={{ 
-            backgroundColor: '#3b82f6', 
+          {/* အသစ်ထည့်လိုက်တဲ့ ခလုတ် - Check Order Page သို့ သွားရန် */}
+          <Link href="/check-order" style={{ 
+            backgroundColor: '#10b981', 
             color: 'white', 
+            padding: '14px', 
+            borderRadius: '12px', 
+            textDecoration: 'none', 
+            fontWeight: '600',
+            transition: 'background 0.2s',
+            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+          }}>
+            🔍 အော်ဒါအခြေအနေ စစ်ဆေးရန်
+          </Link>
+
+          <Link href="/" style={{ 
+            backgroundColor: '#f1f5f9', 
+            color: '#475569', 
             padding: '14px', 
             borderRadius: '12px', 
             textDecoration: 'none', 
@@ -59,7 +73,7 @@ export default function OrderSuccess() {
             Ebook Store သို့ ပြန်သွားရန်
           </Link>
           
-          <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+          <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '10px' }}>
             အကူအညီလိုအပ်ပါက viber: 09123456789 သို့ ဆက်သွယ်နိုင်ပါသည်။
           </p>
         </div>
