@@ -116,14 +116,14 @@ export default function Home() {
                       </button>
                     ) : (
                       <button 
-                        onClick={() => window.location.href = `/checkout?id=${book.id}`}
+                        onClick={() => window.location.href = `/checkout?id=${book.id}&price=${book.price}`}
                         style={{ 
                           width: '100%', padding: '14px', borderRadius: '12px', border: 'none', 
                           backgroundColor: '#3b82f6', color: 'white', fontWeight: '700', cursor: 'pointer',
                           transition: 'background 0.2s', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                         }}
                       >
-                        Get It Now
+                        Buy Now
                       </button>
                     )}
                   </div>
