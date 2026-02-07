@@ -13,7 +13,7 @@ export default function CheckOrder() {
     setLoading(true);
     try {
       const data = await checkOrderStatus(phone);
-      console.log("Order Data:", data); // Browser Console မှာ Link ပါမပါ စစ်လို့ရအောင်
+      console.log("Order Data:", data); 
       setOrder(data);
     } catch (error) {
       console.error("Search Error:", error);
@@ -21,6 +21,9 @@ export default function CheckOrder() {
     setSearched(true);
     setLoading(false);
   };
+
+  // အရေးကြီးဆုံးပြင်ဆင်ချက် - Status ကို အကြီးအသေးမရွေး စစ်ဆေးခြင်း
+  const isCompleted = order?.status?.toLowerCase() === 'completed';
 
   return (
     <div style={{ maxWidth: '500px', margin: '50px auto', padding: '20px', fontFamily: 'sans-serif' }}>
@@ -52,20 +55,19 @@ export default function CheckOrder() {
               <p>📊 <strong>အခြေအနေ:</strong> 
                 <span style={{ 
                   marginLeft: '10px', padding: '4px 8px', borderRadius: '5px', fontSize: '12px',
-                  background: order.status === 'completed' ? '#dcfce7' : '#fef3c7',
-                  color: order.status === 'completed' ? '#15803d' : '#b45309'
+                  background: isCompleted ? '#dcfce7' : '#fef3c7',
+                  color: isCompleted ? '#15803d' : '#b45309'
                 }}>
-                  {order.status === 'completed' ? 'အောင်မြင်သည်' : 'စောင့်ဆိုင်းဆဲ'}
+                  {isCompleted ? 'အောင်မြင်သည်' : 'စောင့်ဆိုင်းဆဲ'}
                 </span>
               </p>
 
               <hr style={{ margin: '20px 0', border: '0.5px solid #e2e8f0' }} />
 
-              {order.status === 'completed' ? (
+              {isCompleted ? (
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '15px' }}>✅ ငွေလွှဲမှု အောင်မြင်ပါသည်။</p>
                   
-                  {/* order.download_url လို့ ပြင်လိုက်ပါတယ် */}
                   {order.download_url ? (
                     <a 
                       href={order.download_url} 
