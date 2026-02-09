@@ -1,12 +1,12 @@
-// src/lib/api.js (Super Debug Version)
 import axios from 'axios';
 
-// --- CONFIG (Your details are correct) ---
 const BASE_URL = 'https://db.drtunmyatwin.com';
-const API_TOKEN = 'jk9vhwA4eEU_TO6w1hlS4dQD6KJpzLsLR-H6dFEZ';
-const ORDERS_TABLE_ID = 'mc5yx33qmli9mwu'; 
-const BOOKS_TABLE_ID = 'mr399coumyy2i0e'; 
-const REQUESTS_TABLE_ID = 'mdjoi907siejqoe'; 
+const API_TOKEN = 'ksQr7hW63EpuDi4CV0x58W1h2EaXHJIllmJtv9tQ';
+
+const ORDERS_TABLE_ID = 'mbqom60ofxn8skz'; 
+const BOOKS_TABLE_ID = 'mq1vecqh3omezlh'; 
+const REQUESTS_TABLE_ID = 'mlznoyczgo8q4t9'; 
+
 const TELEGRAM_BOT_TOKEN = '8397404315:AAGaa-B3fxn2NsjWOUl0jKFp3Ad9vhuxa00';
 const TELEGRAM_CHAT_ID = '@shopdrtunmyatwin';
 
@@ -15,65 +15,148 @@ const nocoApi = axios.create({
   headers: { 'xc-token': API_TOKEN }
 });
 
-// --- Unchanged Functions ---
-export const fetchBooks = async () => { /*...*/ };
-export const submitOrder = async (orderData) => { /*...*/ };
-export const checkOrderStatus = async (phone) => { /*...*/ };
-export const fetchOrders = async () => { /*...*/ };
-export const updateOrderStatus = async (id, status) => { /*...*/ };
-export const voteRequest = async (id, currentVotes) => { /*...*/ };
-export const fetchRequests = async () => { try { const res = await nocoApi.get(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`); return res.data.list; } catch (e) { return []; } };
-
-
-// ==========================================================
-// ★★★ DEBUGGING THIS FUNCTION ★★★
-// ==========================================================
-export const submitRequest = async (data) => {
-  // 1. Prepare NocoDB data payload
-  const nocoPayload = {
-    book_name: data.bookName,
-    author: data.author,
-    requested_by: data.userName,
-    votes: 1, 
-    status: 'pending'
-  };
-  
-  // LOG 1: What are we sending to NocoDB?
-  console.log("DEBUG: Step 1 - Preparing to send data to NocoDB:", nocoPayload);
-
+// --- Books Function ---
+export const fetchBooks = async () => {
   try {
-    // 2. Attempt to POST to NocoDB
-    const res = await nocoApi.post(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, nocoPayload);
-    
-    // LOG 2: If NocoDB call is successful
-    console.log("DEBUG: Step 2 - NocoDB submission successful!", res.data);
+    const res = await nocoApi.get(`/api/v2/tables/${BOOKS_TABLE_ID}/records`);
+    return (res.data.list || []).map(book => {
+      // NocoDB ရဲ့ System ID (1, 2, 3...) ကို ယူခြင်း
+      const nocoId = book.Id || book.id; 
+      
+      let finalImageUrl = "";
+      if (book.cover_image && Array.isArray(book.cover_image) && book.cover_image.length > 0) {
+        finalImageUrl = `${BASE_URL}/${book.cover_image[0].path}`;
+      } else if (typeof book.cover_image === 'string' && book.cover_image.startsWith('http')) {
+        finalImageUrl = book.cover_image;
+      }
+      return {
+        ...book,
+        id: nocoId, // frontend navigation အတွက်
+        book_id: nocoId, // order တင်တဲ့အခါ သုံးရန်
+        title: book.title || book.book_name,
+        cover_image: finalImageUrl
+      };
+    });
+  } catch (e) { 
+    console.error("Fetch books error:", e);
+    return []; 
+  }
+};
 
-    // 3. Prepare Telegram message payload
-    const messageText = `🔥 New Request\n\nBook: ${data.bookName}\nBy: ${data.userName}\n\nVote here: https://shop.drtunmyatwin.com/community`;
-    const telegramPayload = {
-      chat_id: TELEGRAM_CHAT_ID,
-      text: messageText,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: [[{ text: "🗳️ Vote on Website", url: "https://shop.drtunmyatwin.com/community" }]] }
+// --- Orders Functions ---
+export const submitOrder = async (orderData) => {
+  try {
+    let attachmentData = null;
+
+    if (orderData.screenshot) {
+      const formData = new FormData();
+      formData.append('file', orderData.screenshot);
+      
+      try {
+        const uploadRes = await nocoApi.post(`/api/v2/storage/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        if (uploadRes.data && uploadRes.data[0]) {
+          attachmentData = [{
+            path: uploadRes.data[0].path,
+            mimetype: uploadRes.data[0].mimetype,
+            size: uploadRes.data[0].size,
+            title: uploadRes.data[0].title
+          }];
+        }
+      } catch (uploadErr) {
+        console.error("Screenshot upload failed:", uploadErr);
+      }
+    }
+
+    const payload = {
+      customer_name: orderData.name,
+      phone: String(orderData.phone),
+      payment_method: orderData.paymentMethod,
+      amount: orderData.amount,
+      book_id: orderData.book_id,
+      screenshot: attachmentData,
+      status: 'pending'
     };
+
+    const res = await nocoApi.post(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, payload);
+    return res.data;
+  } catch (e) { 
+    console.error("Submit order error:", e.response?.data || e.message);
+    throw e; 
+  }
+};
+
+export const checkOrderStatus = async (phone) => {
+  try {
+    const res = await nocoApi.get(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, {
+      params: { where: `(phone,eq,${String(phone)})` }
+    });
+    return (res.data.list || []).reverse();
+  } catch (e) { return []; }
+};
+
+export const fetchOrders = async () => {
+  try {
+    const res = await nocoApi.get(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, {
+      params: { sort: '-Id', limit: 100 }
+    });
+    // Admin Dashboard မှာ data ပေါ်လာဖို့ list ကို တိုက်ရိုက်ပြန်ပေးပါသည်
+    return res.data.list || res.data || [];
+  } catch (e) { 
+    console.error("Fetch orders error:", e); 
+    return []; 
+  }
+};
+
+export const updateOrderStatus = async (id, status) => {
+  try {
+    await nocoApi.patch(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, { id, status });
+  } catch (e) { 
+    console.error("Update status error:", e.response?.data || e.message);
+    throw e; 
+  }
+};
+
+// --- Community/Request Functions ---
+export const fetchRequests = async () => {
+  try {
+    const res = await nocoApi.get(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, {
+      params: { sort: '-votes' }
+    });
+    return res.data.list || [];
+  } catch (e) { return []; }
+};
+
+export const submitRequest = async (data) => {
+  try {
+    const payload = {
+      book_name: data.bookName,
+      author: data.author,
+      requested_by: data.userName,
+      votes: 1,
+      status: 'pending'
+    };
+    const res = await nocoApi.post(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, payload);
     
-    // LOG 3: What are we sending to Telegram?
-    console.log("DEBUG: Step 3 - Preparing to send message to Telegram:", telegramPayload);
-    
-    // 4. Attempt to POST to Telegram
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, telegramPayload);
-    
-    // LOG 4: If Telegram call is successful
-    console.log("DEBUG: Step 4 - Telegram message sent successfully!");
+    try {
+      await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: `📚 *New Request*\n\nBook: ${data.bookName}\nBy: ${data.userName}`,
+        parse_mode: 'Markdown'
+      });
+    } catch (tgError) { console.error("Telegram notification failed"); }
 
     return res.data;
+  } catch (error) { throw error; }
+};
 
-  } catch (error) {
-    // LOG 5: THIS IS THE MOST IMPORTANT LOG!
-    // It captures ANY error from NocoDB or Telegram.
-    console.error("DEBUG: CRITICAL ERROR during submit process!", error.response ? error.response.data : error.message);
-    
-    // Re-throw the error so the UI can know something went wrong
-    throw error;
-  }
+export const voteRequest = async (id, currentVotes) => {
+  try {
+    await nocoApi.patch(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, {
+      id: id,
+      votes: (Number(currentVotes) || 0) + 1
+    });
+  } catch (e) { throw e; }
 };
