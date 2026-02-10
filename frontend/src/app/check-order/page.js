@@ -1,131 +1,165 @@
 "use client";
-
 import { useState } from "react";
 import { checkOrderStatus } from "@/lib/api";
+import Link from "next/link";
 
 export default function CheckOrder() {
-  const [phone, setPhone] = useState("");
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+    const [phone, setPhone] = useState("");
+    const [order, setOrder] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const data = await checkOrderStatus(phone);
-      console.log("Order Data:", data); 
-      setOrder(data);
-    } catch (error) {
-      console.error("Search Error:", error);
-    }
-    setSearched(true);
-    setLoading(false);
-  };
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        if (!phone) return alert("ဖုန်းနံပါတ် ထည့်ပေးပါ");
 
-  const isCompleted = order?.status?.toLowerCase() === 'completed';
+        setLoading(true);
+        const data = await checkOrderStatus(phone);
+        setOrder(data.length > 0 ? data[0] : null);
+        setSearched(true);
+        setLoading(false);
+    };
 
-  return (
-    <div style={{ maxWidth: '500px', margin: '50px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2 style={{ textAlign: 'center', color: '#1e293b' }}>အော်ဒါအခြေအနေစစ်ဆေးရန်</h2>
-      <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px' }}>ဝယ်ယူစဉ်က အသုံးပြုခဲ့သော ဖုန်းနံပါတ်ကို ရိုက်ထည့်ပါ</p>
-      
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-        <input 
-          type="text" 
-          placeholder="09xxxxxxxxx" 
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ddd', color: '#333' }}
-          required
-        />
-        <button type="submit" style={{ padding: '12px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-          {loading ? 'စစ်ဆေးနေဆဲ...' : 'ရှာပါ'}
-        </button>
-      </form>
+    return (
+        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', padding: '20px' }}>
+            <div style={{ maxWidth: '450px', margin: '50px auto', padding: '30px', backgroundColor: '#fff', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
 
-      {searched && (
-        <div style={{ padding: '20px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          {!order ? (
-            <p style={{ textAlign: 'center', color: '#ef4444' }}>ဤဖုန်းနံပါတ်ဖြင့် အော်ဒါမတွေ့ရှိပါ။</p>
-          ) : (
-            <div>
-              <p>📌 <strong>Order ID:</strong> #{order.id}</p>
-              <p>👤 <strong>အမည်:</strong> {order.customer_name}</p>
-              <p>📊 <strong>အခြေအနေ:</strong> 
-                <span style={{ 
-                  marginLeft: '10px', padding: '4px 8px', borderRadius: '5px', fontSize: '12px',
-                  background: isCompleted ? '#dcfce7' : '#fef3c7',
-                  color: isCompleted ? '#15803d' : '#b45309'
-                }}>
-                  {isCompleted ? 'အောင်မြင်သည်' : 'စောင့်ဆိုင်းဆဲ'}
-                </span>
-              </p>
-              <hr style={{ margin: '20px 0', border: '0.5px solid #e2e8f0' }} />
-              
-              {isCompleted ? (
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ color: '#15803d', fontWeight: 'bold', marginBottom: '15px' }}>✅ ငွေလွှဲမှု အောင်မြင်ပါသည်။</p>
-                  
-                  {order.download_url ? (
-                    <a 
-                      href={order.download_url} 
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ 
-                        display: 'block', background: '#059669', color: 'white', 
-                        padding: '15px', borderRadius: '8px', textDecoration: 'none', 
-                        fontWeight: 'bold', marginBottom: '15px', textAlign: 'center',
-                        boxShadow: '0 4px 6px rgba(5, 150, 105, 0.2)'
-                      }}
+                <Link href="/" style={{ display: 'inline-block', marginBottom: '20px', color: '#3b82f6', fontSize: '0.9rem', fontWeight: '600' }}>
+                    ← ပင်မစာမျက်နှာသို့
+                </Link>
+
+                <h3 style={{ textAlign: 'center', color: '#1e40af', marginBottom: '25px', fontSize: '1.4rem' }}>🔍 အော်ဒါအခြေအနေ စစ်ဆေးရန်</h3>
+
+                <form onSubmit={handleSearch} style={{ marginBottom: '25px' }}>
+                    <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="ဝယ်ယူစဉ်က အသုံးပြုခဲ့သော ဖုန်းနံပါတ်"
+                        style={{ width: '100%', padding: '14px', marginBottom: '12px', borderRadius: '12px', border: '1px solid #e5e7eb', outline: 'none', boxSizing: 'border-box', fontSize: '1rem' }}
+                    />
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{ width: '100%', padding: '14px', background: loading ? '#93c5fd' : '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1rem', transition: 'background-color 0.2s' }}
                     >
-                      📥 Download Ebook ရယူရန်နှိပ်ပါ
-                    </a>
-                  ) : (
-                    <p style={{ color: '#ef4444', fontSize: '13px' }}>⚠️ Download Link မတွေ့ပါ။ ခေတ္တစောင့်ပေးပါ။</p>
-                  )}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', color: '#b45309' }}>
-                  <p>⏳ ခေတ္တစောင့်ဆိုင်းပါ၊ ငွေလွှဲစစ်ဆေးနေပါသည်...</p>
-                  <p style={{ fontSize: '12px' }}>၁၅ မိနစ်မှ ၃၀ မိနစ်အတွင်း အတည်ပြုပေးပါမည်။</p>
-                </div>
-              )}
+                        {loading ? "ရှာဖွေနေပါသည်..." : "အခြေအနေ စစ်ဆေးမည်"}
+                    </button>
+                </form>
 
-              {/* Telegram Channel Section (Updated Design) */}
-              <div style={{ marginTop: '25px', padding: '20px', background: 'linear-gradient(to right, #eff6ff, #ffffff)', borderRadius: '12px', border: '1px solid #bfdbfe', textAlign: 'center' }}>
-                <p style={{ fontSize: '14px', marginBottom: '15px', color: '#1e40af', lineHeight: '1.6' }}>
-                  🎁 <strong>နောက်ထပ် စာအုပ်အသစ်များနှင့် Discount များ ရယူရန်</strong> <br/>
-                  ကျွန်ုပ်တို့၏ Telegram Channel သို့ Join ထားနိုင်ပါသည်။
-                </p>
-                
-                <a 
-                  href="https://t.me/shopdrtunmyatwin" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ 
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    background: '#0088cc', color: 'white', 
-                    padding: '12px 24px', borderRadius: '50px', 
-                    textDecoration: 'none', fontWeight: 'bold',
-                    boxShadow: '0 4px 6px rgba(0, 136, 204, 0.2)',
-                    transition: 'transform 0.2s',
-                    width: 'fit-content',
-                    margin: '0 auto'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.008-1.252-.241-1.865-.44-.751-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.141.119.098.152.228.166.319.016.095.008.192.003.265z"/>
-                  </svg>
-                  Join Telegram Channel
-                </a>
-              </div>
+                {searched && (
+                    <div className="fade-in" style={{ marginTop: '20px', padding: '25px', borderRadius: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                        {!order ? (
+                            <div style={{ textAlign: 'center', color: '#64748b' }}>
+                                <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>❌ ဤဖုန်းနံပါတ်ဖြင့် အော်ဒါမရှိသေးပါ။</p>
+                                <p style={{ fontSize: '0.85rem' }}>ဖုန်းနံပါတ် မှန်ကန်စွာ ရိုက်ထည့်ထားခြင်း ရှိမရှိ ပြန်လည်စစ်ဆေးပေးပါ။</p>
+                            </div>
+                        ) : (
+                            <div>
+                                {/* Order ID */}
+                                <div style={{ textAlign: 'center', marginBottom: '20px', padding: '15px', backgroundColor: '#eff6ff', borderRadius: '12px' }}>
+                                    <p style={{ margin: '0', fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>ORDER ID</p>
+                                    <p style={{ margin: '5px 0 0', fontSize: '1.5rem', fontWeight: '800', color: '#1e40af' }}>#{order.id}</p>
+                                </div>
+
+                                {/* Order Details */}
+                                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '18px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ marginBottom: '15px' }}>
+                                        <p style={{ margin: '0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>မှာယူသူ အမည်</p>
+                                        <p style={{ margin: '5px 0 0', fontSize: '1.1rem', fontWeight: '700', color: '#1e293b' }}>{order.customer_name || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
+                                        <p style={{ margin: '0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>စာအုပ်အမည်</p>
+                                        <p style={{ margin: '5px 0 0', fontSize: '1.1rem', fontWeight: '700', color: '#1e293b' }}>📚 {order.book_title || 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Status */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <p style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>လက်ရှိအခြေအနေ:</p>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        padding: '10px 20px',
+                                        borderRadius: '25px',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: order.status === 'completed' ? '#dcfce7' : order.status === 'rejected' ? '#fee2e2' : '#fff7ed',
+                                        color: order.status === 'completed' ? '#15803d' : order.status === 'rejected' ? '#991b1b' : '#c2410c'
+                                    }}>
+                                        {order.status === 'completed' ? '✅ အတည်ပြုပြီးပါပြီ' :
+                                            order.status === 'rejected' ? '❌ ငွေလွှဲမှု မအောင်မြင်ပါ' :
+                                                '⏳ Admin မှ စစ်ဆေးနေဆဲ'}
+                                    </span>
+                                </div>
+
+                                {/* Download Button - Status 'completed' ဖြစ်မှသာ Link ပေါ်မည် */}
+                                {order.status === 'completed' && order.download_url ? (
+                                    <a
+                                        href={order.download_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            display: 'block',
+                                            textAlign: 'center',
+                                            padding: '16px',
+                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                            color: 'white',
+                                            textDecoration: 'none',
+                                            borderRadius: '12px',
+                                            fontWeight: 'bold',
+                                            fontSize: '1rem',
+                                            boxShadow: '0 6px 15px rgba(16, 185, 129, 0.3)'
+                                        }}
+                                    >
+                                        📥 စာအုပ်ဒေါင်းလုဒ်လုပ်ရန် နှိပ်ပါ
+                                    </a>
+                                ) : order.status === 'completed' && !order.download_url ? (
+                                    <p style={{ color: '#ef4444', fontSize: '0.85rem', fontStyle: 'italic', textAlign: 'center' }}>* ဒေါင်းလုဒ် Link ရှာမတွေ့ပါ။ Admin ကို ဆက်သွယ်ပါ။</p>
+                                ) : null}
+
+                                {/* Telegram Channel Button */}
+                                <div style={{ marginTop: '25px', borderTop: '1px dashed #e2e8f0', paddingTop: '20px', textAlign: 'center' }}>
+                                    <p style={{ margin: '0 0 15px 0', fontSize: '0.9rem', color: '#64748b', lineHeight: '1.6' }}>
+                                        📢 စာအုပ်များ တောင်းဆိုရန်၊ မေးမြန်းဆွေးနွေးရန်နှင့်<br />
+                                        နောက်ဆုံးရ သတင်းအချက်အလက်များကို သိရှိရန်<br />
+                                        ကျွန်ုပ်တို့၏ <b style={{ color: '#0088cc' }}>Telegram Channel</b> သို့ ဝင်ရောက်ပါ။
+                                    </p>
+
+                                    <a href="tg://resolve?domain=shopdrtunmyatwin"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px',
+                                            padding: '12px 25px',
+                                            backgroundColor: '#0088cc',
+                                            color: 'white',
+                                            textDecoration: 'none',
+                                            borderRadius: '50px',
+                                            fontWeight: 'bold',
+                                            fontSize: '1rem',
+                                            boxShadow: '0 4px 15px rgba(0, 136, 204, 0.25)',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            width: '100%',
+                                            maxWidth: '300px'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 136, 204, 0.35)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 136, 204, 0.25)'; }}
+                                    >
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M11.944 0C5.352 0 0 5.352 0 11.944C0 18.536 5.352 23.888 11.944 23.888C18.536 23.888 23.888 18.536 23.888 11.944C23.888 5.352 18.536 0 11.944 0ZM17.656 8.52L15.936 17.528C15.808 18.096 15.464 18.232 14.992 17.96L10.88 14.928L8.896 16.84C8.68 17.056 8.496 17.24 8.08 17.24L8.376 13.064L15.976 6.192C16.304 5.896 15.904 5.728 15.472 6.016L6.08 11.928L2.04 10.664C1.16 10.392 1.144 9.784 2.224 9.36L17.24 3.576C17.936 3.328 18.544 3.744 17.656 8.52Z" />
+                                        </svg>
+                                        Join Telegram Channel
+                                    </a>
+                                    <p style={{ marginTop: '10px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                        (VPN ဖွင့်ထားရန် လိုအပ်နိုင်ပါသည်)
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-          )}
         </div>
-      )}
-    </div>
-  );
+    );
 }

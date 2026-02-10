@@ -1,126 +1,258 @@
 "use client";
-import { useState, useEffect } from "react";
-import { fetchOrders, updateOrderStatus } from "@/lib/api";
+import { useState, useEffect } from 'react';
+import { fetchOrders, updateOrderStatus, fetchBooks } from '@/lib/api';
+import Link from 'next/link';
 
-export default function AdminDashboard() {
-  const [orders, setOrders] = useState([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState("");
+export default function AdminPage() {
+    const [orders, setOrders] = useState([]);
+    const [books, setBooks] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState(null);
 
-  useEffect(() => {
-    const savedLogin = localStorage.getItem("admin_auth");
-    if (savedLogin === "true") setIsLoggedIn(true);
-  }, []);
+    useEffect(() => {
+        loadData();
+    }, []);
 
-  const loadOrders = async () => {
-    const data = await fetchOrders();
-    setOrders(data);
-  };
+    const loadData = async () => {
+        setLoading(true);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadOrders();
-      const interval = setInterval(loadOrders, 10000); 
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn]);
+        // Fetch books first to get book titles
+        const booksData = await fetchBooks();
+        const booksMap = {};
+        booksData.forEach(book => {
+            booksMap[book.id] = book;
+        });
+        setBooks(booksMap);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (password === "tmw3171982") {
-      setIsLoggedIn(true);
-      localStorage.setItem("admin_auth", "true");
-    } else {
-      alert("Password မှားနေပါသည်!");
-    }
-  };
+        // Fetch orders and sort by id descending (newest first)
+        const ordersData = await fetchOrders();
+        const sortedOrders = ordersData.sort((a, b) => (b.id || 0) - (a.id || 0));
+        setOrders(sortedOrders);
 
-  const handleStatusUpdate = async (id, newStatus) => {
-    const confirmMsg = newStatus === 'completed' ? "Approve လုပ်မှာ သေချာပါသလား?" : "Reject လုပ်မှာ သေချာပါသလား?";
-    if (!window.confirm(confirmMsg)) return;
+        setLoading(false);
+    };
 
-    try {
-      await updateOrderStatus(id, newStatus);
-      loadOrders(); 
-    } catch (error) {
-      alert("Error updating status");
-    }
-  };
+    const handleStatusUpdate = async (id, newStatus) => {
+        setUpdating(id);
+        try {
+            await updateOrderStatus(id, newStatus);
+            await loadData();
+        } catch (err) {
+            console.error("Update error:", err);
+            alert("Status update မအောင်မြင်ပါ: " + (err.message || 'Unknown error'));
+        }
+        setUpdating(null);
+    };
 
-  const getScreenshotUrl = (screenshotData) => {
-    try {
-      if (!screenshotData) return null;
-      const data = typeof screenshotData === 'string' ? JSON.parse(screenshotData) : screenshotData;
-      return Array.isArray(data) ? `https://db.drtunmyatwin.com/${data[0].path}` : null;
-    } catch (e) { return null; }
-  };
+    const getBookTitle = (bookId) => {
+        if (books[bookId]) {
+            return books[bookId].title || 'Unknown';
+        }
+        return 'Book #' + bookId;
+    };
 
-  if (!isLoggedIn) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' }}>
-        <div style={{ padding: '40px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ textAlign: "center", marginBottom: '20px' }}>Admin Login</h2>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" style={{ padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", width: '250px', color: '#333' }} />
-            <button type="submit" style={{ padding: "12px", background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Login</button>
-          </form>
+    const getBookPrice = (bookId) => {
+        if (books[bookId]) {
+            return books[bookId].price || 0;
+        }
+        return 0;
+    };
+
+    const getScreenshotUrl = (screenshot) => {
+        if (!screenshot || !Array.isArray(screenshot) || screenshot.length === 0) return null;
+        const img = screenshot[0];
+        if (img.signedPath) {
+            return `https://db.drtunmyatwin.com/${img.signedPath}`;
+        }
+        if (img.path) {
+            return img.path.startsWith('http') ? img.path : `https://db.drtunmyatwin.com/${img.path}`;
+        }
+        return null;
+    };
+
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc' }}>
+            <div style={{ textAlign: 'center' }}>
+                <div className="spinner" style={{ margin: '0 auto 15px' }}></div>
+                <div style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '600' }}>Orders ရယူနေသည်...</div>
+            </div>
         </div>
-      </div>
     );
-  }
 
-  return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto", fontFamily: 'sans-serif' }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: '30px' }}>
-        <h2>Admin Dashboard</h2>
-        <button onClick={() => { localStorage.removeItem("admin_auth"); setIsLoggedIn(false); }} style={{ background: "#ef4444", color: "white", border: "none", padding: "8px 20px", borderRadius: "6px", cursor: "pointer" }}>Logout</button>
-      </div>
-      
-      <table style={{ width: "100%", borderCollapse: "collapse", background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
-        <thead style={{ background: "#1e293b", color: 'white' }}>
-          <tr>
-            <th style={{ padding: '15px' }}>ID</th>
-            <th style={{ padding: '15px' }}>အမည်</th>
-            <th style={{ padding: '15px' }}>ဖုန်း</th>
-            <th style={{ padding: '15px' }}>ပြေစာ</th>
-            <th style={{ padding: '15px' }}>အခြေအနေ</th>
-            <th style={{ padding: '15px' }}>လုပ်ဆောင်ချက်</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tr key={order.id} style={{ textAlign: "center", borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ padding: '15px' }}>#{order.id}</td>
-              <td style={{ padding: '15px' }}>{order.customer_name}</td>
-              <td style={{ padding: '15px' }}>{order.phone}</td>
-              <td style={{ padding: '15px' }}>
-                {getScreenshotUrl(order.screenshot) ? (
-                  <a href={getScreenshotUrl(order.screenshot)} target="_blank" rel="noopener noreferrer">
-                    <img src={getScreenshotUrl(order.screenshot)} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} alt="receipt" />
-                  </a>
-                ) : "No Image"}
-              </td>
-              <td style={{ padding: '15px' }}>
-                <span style={{ 
-                  padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase',
-                  background: order.status === 'completed' ? '#dcfce7' : order.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                  color: order.status === 'completed' ? '#15803d' : order.status === 'rejected' ? '#b91c1c' : '#b45309'
-                }}>
-                  {order.status}
-                </span>
-              </td>
-              <td style={{ padding: "15px" }}>
-                {order.status === 'pending' && (
-                  <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                    <button onClick={() => handleStatusUpdate(order.id, 'completed')} style={{ background: "#22c55e", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", cursor: "pointer", fontSize: '11px' }}>Approve</button>
-                    <button onClick={() => handleStatusUpdate(order.id, 'rejected')} style={{ background: "#ef4444", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", cursor: "pointer", fontSize: '11px' }}>Reject</button>
-                  </div>
+    return (
+        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
+
+            {/* Header */}
+            <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', padding: '30px 20px', color: 'white' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    <Link href="/" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: '10px', display: 'inline-block' }}>
+                        ← ပင်မစာမျက်နှာသို့
+                    </Link>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: '800', margin: '10px 0 5px' }}>🛠️ Admin Panel</h1>
+                    <p style={{ opacity: 0.9 }}>Order များကို စစ်ဆေးပြီး အတည်ပြုပေးပါ (Newest First)</p>
+                </div>
+            </div>
+
+            {/* Orders Table */}
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2 style={{ color: '#1e293b', fontSize: '1.2rem' }}>📋 Orders ({orders.length})</h2>
+                    <button onClick={loadData} style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                {orders.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px', backgroundColor: 'white', borderRadius: '12px', color: '#64748b' }}>
+                        <p style={{ fontSize: '1.2rem' }}>📭 Order မရှိသေးပါ</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>ID</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>Customer</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>Phone</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '700', color: '#475569' }}>Book Title</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>Book ID</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'right', fontWeight: '700', color: '#475569' }}>Price</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>Screenshot</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>Status</th>
+                                    <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '700', color: '#475569' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.map((order, index) => {
+                                    const screenshotUrl = getScreenshotUrl(order.screenshot);
+                                    const isUpdating = updating === order.id;
+
+                                    return (
+                                        <tr key={order.id} style={{
+                                            borderBottom: '1px solid #f1f5f9',
+                                            backgroundColor: index % 2 === 0 ? 'white' : '#fafbfc'
+                                        }}>
+                                            {/* ID */}
+                                            <td style={{ padding: '12px', fontWeight: '700', color: '#1e40af' }}>
+                                                #{order.id}
+                                            </td>
+
+                                            {/* Customer Name */}
+                                            <td style={{ padding: '12px', color: '#1e293b', fontWeight: '600', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {order.customer_name || 'N/A'}
+                                            </td>
+
+                                            {/* Phone */}
+                                            <td style={{ padding: '12px', color: '#64748b' }}>
+                                                {order.phone || 'N/A'}
+                                            </td>
+
+                                            {/* Book Title */}
+                                            <td style={{ padding: '12px', color: '#1e293b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {getBookTitle(order.book_id)}
+                                            </td>
+
+                                            {/* Book ID */}
+                                            <td style={{ padding: '12px', textAlign: 'center', color: '#64748b' }}>
+                                                {order.book_id || '-'}
+                                            </td>
+
+                                            {/* Price */}
+                                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#059669' }}>
+                                                {(order.amount || getBookPrice(order.book_id)).toLocaleString()} MMK
+                                            </td>
+
+                                            {/* Screenshot */}
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                {screenshotUrl ? (
+                                                    <a href={screenshotUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>
+                                                        📷 View
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: '#94a3b8' }}>-</span>
+                                                )}
+                                            </td>
+
+                                            {/* Status Badge */}
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: '700',
+                                                    backgroundColor: order.status === 'completed' ? '#dcfce7' : order.status === 'rejected' ? '#fee2e2' : '#fff7ed',
+                                                    color: order.status === 'completed' ? '#15803d' : order.status === 'rejected' ? '#991b1b' : '#c2410c'
+                                                }}>
+                                                    {order.status === 'completed' ? '✅' : order.status === 'rejected' ? '❌' : '⏳'} {order.status || 'pending'}
+                                                </span>
+                                            </td>
+
+                                            {/* Action Buttons */}
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(order.id, 'completed')}
+                                                        disabled={isUpdating || order.status === 'completed'}
+                                                        style={{
+                                                            padding: '6px 10px',
+                                                            backgroundColor: order.status === 'completed' ? '#86efac' : '#10b981',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: '600',
+                                                            cursor: order.status === 'completed' ? 'not-allowed' : 'pointer',
+                                                            opacity: order.status === 'completed' ? 0.5 : 1
+                                                        }}
+                                                    >
+                                                        {isUpdating ? '...' : '✓'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(order.id, 'rejected')}
+                                                        disabled={isUpdating || order.status === 'rejected'}
+                                                        style={{
+                                                            padding: '6px 10px',
+                                                            backgroundColor: order.status === 'rejected' ? '#fca5a5' : '#ef4444',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: '600',
+                                                            cursor: order.status === 'rejected' ? 'not-allowed' : 'pointer',
+                                                            opacity: order.status === 'rejected' ? 0.5 : 1
+                                                        }}
+                                                    >
+                                                        {isUpdating ? '...' : '✗'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStatusUpdate(order.id, 'pending')}
+                                                        disabled={isUpdating || order.status === 'pending'}
+                                                        style={{
+                                                            padding: '6px 10px',
+                                                            backgroundColor: order.status === 'pending' ? '#fcd34d' : '#f59e0b',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: '600',
+                                                            cursor: order.status === 'pending' ? 'not-allowed' : 'pointer',
+                                                            opacity: order.status === 'pending' ? 0.5 : 1
+                                                        }}
+                                                    >
+                                                        {isUpdating ? '...' : '⏳'}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+            </div>
+        </div>
+    );
 }

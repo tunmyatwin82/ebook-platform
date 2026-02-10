@@ -2,82 +2,36 @@
 import Link from 'next/link';
 
 export default function OrderSuccess() {
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: '#f8fafc',
-      fontFamily: 'sans-serif',
-      padding: '20px'
-    }}>
-      <div style={{ 
-        maxWidth: '500px', 
-        width: '100%', 
-        backgroundColor: 'white', 
-        padding: '40px', 
-        borderRadius: '24px', 
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        textAlign: 'center'
-      }}>
-        {/* Success Icon */}
-        <div style={{ 
-          width: '80px', 
-          height: '80px', 
-          backgroundColor: '#ecfdf5', 
-          borderRadius: '50%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          margin: '0 auto 24px auto'
-        }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+    return (
+        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+            <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '25px', padding: '50px 40px', textAlign: 'center', maxWidth: '450px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}>
+
+                <div style={{ width: '80px', height: '80px', backgroundColor: '#dcfce7', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 25px', fontSize: '2.5rem' }}>
+                    ✅
+                </div>
+
+                <h1 style={{ color: '#15803d', fontSize: '1.8rem', marginBottom: '15px' }}>အော်ဒါတင်ပြီးပါပြီ!</h1>
+
+                <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.7', marginBottom: '30px' }}>
+                    သင့်အော်ဒါကို Admin မှ စစ်ဆေးပြီးပါက စာအုပ် download link ကို ဖုန်းနံပါတ်ဖြင့် စစ်ဆေးနိုင်ပါသည်။
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                    {/* Telegram Button */}
+                    <a href="tg://resolve?domain=shopdrtunmyatwin"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', backgroundColor: '#0088cc', color: 'white', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0, 136, 204, 0.2)' }}>
+                        <span style={{ fontSize: '1.2rem' }}>📢</span> Telegram Channel သို့ဝင်ရန်
+                    </a>
+
+                    <Link href="/check-order" style={{ display: 'block', padding: '16px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', textDecoration: 'none' }}>
+                        🔍 Order အခြေအနေ စစ်ဆေးရန်
+                    </Link>
+                    <Link href="/" style={{ display: 'block', padding: '16px', backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', textDecoration: 'none' }}>
+                        🏠 ပင်မစာမျက်နှာသို့
+                    </Link>
+                </div>
+            </div>
         </div>
-
-        <h1 style={{ color: '#111827', fontSize: '1.8rem', fontWeight: '800', marginBottom: '16px' }}>
-          Order Received!
-        </h1>
-        
-        <p style={{ color: '#4b5563', lineHeight: '1.6', marginBottom: '32px' }}>
-          ဝယ်ယူအားပေးမှုကို ကျေးဇူးတင်ပါသည်။ သင်၏ ငွေလွှဲပြေစာကို ကျွန်ုပ်တို့ လက်ခံရရှိပါပြီ။ <br/>
-          Admin မှ စစ်ဆေးပြီးပါက အောက်ပါ <b>"အော်ဒါအခြေအနေစစ်ဆေးရန်"</b> ခလုတ်တွင် စာအုပ်ကို တိုက်ရိုက် Download ရယူနိုင်ပါသည်။
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* အသစ်ထည့်လိုက်တဲ့ ခလုတ် - Check Order Page သို့ သွားရန် */}
-          <Link href="/check-order" style={{ 
-            backgroundColor: '#10b981', 
-            color: 'white', 
-            padding: '14px', 
-            borderRadius: '12px', 
-            textDecoration: 'none', 
-            fontWeight: '600',
-            transition: 'background 0.2s',
-            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
-          }}>
-            🔍 အော်ဒါအခြေအနေ စစ်ဆေးရန်
-          </Link>
-
-          <Link href="/" style={{ 
-            backgroundColor: '#f1f5f9', 
-            color: '#475569', 
-            padding: '14px', 
-            borderRadius: '12px', 
-            textDecoration: 'none', 
-            fontWeight: '600',
-            transition: 'background 0.2s'
-          }}>
-            Ebook Store သို့ ပြန်သွားရန်
-          </Link>
-          
-          <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '10px' }}>
-            အကူအညီလိုအပ်ပါက viber: 09123456789 သို့ ဆက်သွယ်နိုင်ပါသည်။
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
