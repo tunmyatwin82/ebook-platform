@@ -16,6 +16,9 @@ export default function Home() {
         });
     }, []);
 
+    const freeBooks = books.filter(book => !book.price || parseFloat(book.price) === 0);
+    const premiumBooks = books.filter(book => book.price && parseFloat(book.price) > 0);
+
     const getImageUrl = (cover_image) => {
         if (!cover_image) return null;
         let rawPath = "";
@@ -52,33 +55,61 @@ export default function Home() {
         </div>
     );
 
-    return (
-        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
-
-            {/* Header Section */}
-            <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', padding: '70px 20px', textAlign: 'center', color: 'white' }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '15px' }}>Dr. Tun Myat Win's Ebook Store</h1>
-                <p style={{ fontSize: '1.2rem', opacity: 0.9 }}>ဗဟုသုတနှင့် ကျန်းမာရေးဆိုင်ရာ စာအုပ်ကောင်းများ</p>
-
-                <div style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <Link href="/community" style={{ textDecoration: 'none', background: 'white', color: '#1e40af', padding: '12px 25px', borderRadius: '50px', fontWeight: 'bold' }}>
-                        🙋‍♂️ စာအုပ်တောင်းဆိုရန်
-                    </Link>
-                    <Link href="/check-order" style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '12px 25px', borderRadius: '50px', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(5px)' }}>
-                        🔍 Order အခြေအနေစစ်ရန်
-                    </Link>
+    const renderBookSection = (title, bookList, isPremiumSection) => {
+        if (bookList.length === 0) return null;
+        return (
+            <div style={{ marginBottom: '60px' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '30px',
+                    borderBottom: '2px solid #e2e8f0',
+                    paddingBottom: '15px'
+                }}>
+                    <div style={{
+                        backgroundColor: isPremiumSection ? '#1e40af' : '#10b981',
+                        width: '5px',
+                        height: '35px',
+                        borderRadius: '10px',
+                        marginRight: '15px'
+                    }}></div>
+                    <h2 style={{
+                        fontSize: '1.8rem',
+                        fontWeight: '800',
+                        color: '#1e293b',
+                        margin: 0
+                    }}>
+                        {title}
+                    </h2>
+                    <span style={{
+                        marginLeft: '15px',
+                        backgroundColor: isPremiumSection ? '#dbeafe' : '#d1fae5',
+                        color: isPremiumSection ? '#1e40af' : '#047857',
+                        padding: '5px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.85rem',
+                        fontWeight: '700'
+                    }}>
+                        {bookList.length} အုပ်
+                    </span>
                 </div>
-            </div>
 
-            {/* Book Grid */}
-            <div style={{ padding: '50px 20px', maxWidth: '1200px', margin: '0 auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '35px' }}>
-                    {books.map(book => {
+                    {bookList.map(book => {
                         const isFree = !book.price || parseFloat(book.price) === 0;
                         const bookCover = getImageUrl(book.cover_image);
 
                         return (
-                            <div key={book.id} className="fade-in" style={{ backgroundColor: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                            <div key={book.id} className="fade-in" style={{
+                                backgroundColor: 'white',
+                                borderRadius: '20px',
+                                overflow: 'hidden',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                border: isPremiumSection ? 'none' : '2px solid #10b981'
+                            }}
                                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.1)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.05)'; }}>
 
@@ -127,6 +158,32 @@ export default function Home() {
                         );
                     })}
                 </div>
+            </div>
+        );
+    };
+
+    return (
+        <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '50px' }}>
+
+            {/* Header Section */}
+            <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', padding: '70px 20px', textAlign: 'center', color: 'white' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '15px' }}>Dr. Tun Myat Win's Ebook Store</h1>
+                <p style={{ fontSize: '1.2rem', opacity: 0.9 }}>ဗဟုသုတနှင့် ကျန်းမာရေးဆိုင်ရာ စာအုပ်ကောင်းများ</p>
+
+                <div style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Link href="/community" style={{ textDecoration: 'none', background: 'white', color: '#1e40af', padding: '12px 25px', borderRadius: '50px', fontWeight: 'bold' }}>
+                        🙋‍♂️ စာအုပ်တောင်းဆိုရန်
+                    </Link>
+                    <Link href="/check-order" style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '12px 25px', borderRadius: '50px', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(5px)' }}>
+                        🔍 Order အခြေအနေစစ်ရန်
+                    </Link>
+                </div>
+            </div>
+
+            {/* Books Container */}
+            <div style={{ padding: '50px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+                {renderBookSection("ဝယ်ယူရန် စာအုပ်များ", premiumBooks, true)}
+                {renderBookSection("အခမဲ့ ရယူနိုင်သော စာအုပ်များ", freeBooks, false)}
             </div>
         </div>
     );

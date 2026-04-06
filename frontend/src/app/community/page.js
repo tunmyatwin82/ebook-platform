@@ -14,8 +14,13 @@ export default function CommunityPage() {
         userName: ''
     });
 
+    const [votedItems, setVotedItems] = useState([]);
+
     useEffect(() => {
         loadRequests();
+        // Load voted items from localStorage
+        const voted = JSON.parse(localStorage.getItem('votedRequests') || '[]');
+        setVotedItems(voted);
     }, []);
 
     const loadRequests = async () => {
@@ -44,11 +49,30 @@ export default function CommunityPage() {
     };
 
     const handleVote = async (id, currentVotes) => {
+        if (votedItems.includes(id)) {
+            return alert("သင် Vote ပေးပြီးသားပါ");
+        }
+
         try {
+            // Optimistic Update
+            setRequests(prev => prev.map(req => {
+                const reqId = req.Id || req.id;
+                if (reqId === id) {
+                    return { ...req, votes: (Number(req.votes) || 0) + 1 };
+                }
+                return req;
+            }));
+
+            // Save to LocalStorage
+            const newVoted = [...votedItems, id];
+            setVotedItems(newVoted);
+            localStorage.setItem('votedRequests', JSON.stringify(newVoted));
+
             await voteRequest(id, currentVotes);
-            await loadRequests();
+            // No need to reload everything, optimistic update handles UI
         } catch (err) {
             alert("Vote မအောင်မြင်ပါ");
+            await loadRequests(); // Revert on error
         }
     };
 
@@ -140,45 +164,62 @@ export default function CommunityPage() {
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        {requests.map((req, index) => (
-                            <div key={req.Id || req.id} className="fade-in" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {requests.map((req, index) => {
+                            const reqId = req.Id || req.id;
+                            const isVoted = votedItems.includes(reqId);
 
-                                {/* Vote Section */}
-                                <div style={{ textAlign: 'center', minWidth: '70px' }}>
-                                    <button
-                                        onClick={() => handleVote(req.Id || req.id, req.votes)}
-                                        style={{ width: '50px', height: '50px', borderRadius: '50%', border: 'none', backgroundColor: '#eff6ff', color: '#3b82f6', fontSize: '1.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                                        onMouseEnter={(e) => { e.target.style.backgroundColor = '#3b82f6'; e.target.style.color = 'white'; }}
-                                        onMouseLeave={(e) => { e.target.style.backgroundColor = '#eff6ff'; e.target.style.color = '#3b82f6'; }}
-                                    >
-                                        👍
-                                    </button>
-                                    <p style={{ margin: '8px 0 0', fontWeight: '800', color: '#3b82f6', fontSize: '1.1rem' }}>{req.votes || 0}</p>
-                                </div>
+                            return (
+                                <div key={reqId} className="fade-in" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '20px' }}>
 
-                                {/* Content */}
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                                        {index < 3 && <span style={{ fontSize: '1.2rem' }}>{index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>}
-                                        <h3 style={{ color: '#1e293b', fontSize: '1.1rem', margin: 0 }}>{req.book_name}</h3>
+                                    {/* Vote Section */}
+                                    <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                                        <button
+                                            onClick={() => handleVote(reqId, req.votes)}
+                                            disabled={isVoted}
+                                            style={{
+                                                width: '50px',
+                                                height: '50px',
+                                                borderRadius: '50%',
+                                                border: 'none',
+                                                backgroundColor: isVoted ? '#3b82f6' : '#eff6ff',
+                                                color: isVoted ? 'white' : '#3b82f6',
+                                                fontSize: '1.5rem',
+                                                cursor: isVoted ? 'default' : 'pointer',
+                                                transition: 'all 0.2s',
+                                                opacity: isVoted ? 1 : 0.8
+                                            }}
+                                            onMouseEnter={(e) => { if (!isVoted) { e.target.style.backgroundColor = '#3b82f6'; e.target.style.color = 'white'; } }}
+                                            onMouseLeave={(e) => { if (!isVoted) { e.target.style.backgroundColor = '#eff6ff'; e.target.style.color = '#3b82f6'; } }}
+                                        >
+                                            👍
+                                        </button>
+                                        <p style={{ margin: '8px 0 0', fontWeight: '800', color: '#3b82f6', fontSize: '1.1rem' }}>{req.votes || 0}</p>
                                     </div>
-                                    {req.author && <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 5px' }}>✍️ {req.author}</p>}
-                                    <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>တောင်းဆိုသူ: {req.requested_by}</p>
-                                </div>
 
-                                {/* Status Badge */}
-                                <span style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    backgroundColor: req.status === 'completed' ? '#dcfce7' : '#fff7ed',
-                                    color: req.status === 'completed' ? '#15803d' : '#c2410c'
-                                }}>
-                                    {req.status === 'completed' ? '✅ ရရှိပြီး' : '⏳ စောင့်ဆိုင်းဆဲ'}
-                                </span>
-                            </div>
-                        ))}
+                                    {/* Content */}
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                            {index < 3 && <span style={{ fontSize: '1.2rem' }}>{index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>}
+                                            <h3 style={{ color: '#1e293b', fontSize: '1.1rem', margin: 0 }}>{req.book_name}</h3>
+                                        </div>
+                                        {req.author && <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 5px' }}>✍️ {req.author}</p>}
+                                        <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>တောင်းဆိုသူ: {req.requested_by}</p>
+                                    </div>
+
+                                    {/* Status Badge */}
+                                    <span style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '20px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: req.status === 'completed' ? '#dcfce7' : '#fff7ed',
+                                        color: req.status === 'completed' ? '#15803d' : '#c2410c'
+                                    }}>
+                                        {req.status === 'completed' ? '✅ ရရှိပြီး' : '⏳ စောင့်ဆိုင်းဆဲ'}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

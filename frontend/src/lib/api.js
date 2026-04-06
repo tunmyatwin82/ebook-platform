@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://db.drtunmyatwin.com';
-const API_TOKEN = 'ksQr7hW63EpuDi4CV0x58W1h2EaXHJIllmJtv9tQ';
+// Environment variables များမှ ယူရန် ပြင်ဆင်ခြင်း
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://db.drtunmyatwin.com';
+const API_TOKEN = process.env.NEXT_PUBLIC_NOCODB_TOKEN;
 
-const ORDERS_TABLE_ID = 'mbqom60ofxn8skz';
-const BOOKS_TABLE_ID = 'mq1vecqh3omezlh';
-const REQUESTS_TABLE_ID = 'mlznoyczgo8q4t9';
+const BOOKS_TABLE_ID = process.env.NEXT_PUBLIC_BOOK_TABLE_ID;
+const ORDERS_TABLE_ID = process.env.NEXT_PUBLIC_ORDERS_TABLE_ID;
+const REQUESTS_TABLE_ID = process.env.NEXT_PUBLIC_REQUESTS_TABLE_ID;
 
 const TELEGRAM_BOT_TOKEN = '8397404315:AAGaa-B3fxn2NsjWOUl0jKFp3Ad9vhuxa00';
 const TELEGRAM_CHAT_ID = '@shopdrtunmyatwin';
@@ -15,7 +16,6 @@ const nocoApi = axios.create({
     headers: { 'xc-token': API_TOKEN, 'Content-Type': 'application/json' }
 });
 
-// ✅ Data ပုံစံကို အမြဲတမ်း Array ဖြစ်အောင် ပြုပြင်ပေးမည့် function
 const normalizeList = (res) => {
     if (res.data && res.data.list && Array.isArray(res.data.list)) return res.data.list;
     if (Array.isArray(res.data)) return res.data;
@@ -36,126 +36,66 @@ export const fetchBooks = async () => {
 };
 
 // --- 2. Orders ---
-
-// ✅ Admin မှာ order တွေ အကုန်ပေါ်အောင် ပြင်ဆင်ထားသည်
 export const fetchOrders = async () => {
     try {
-        console.log("📋 Fetching all orders...");
         const res = await nocoApi.get(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, {
             params: { limit: 100 }
         });
-        console.log("📋 Raw API Response:", res.data);
-        const orders = normalizeList(res);
-        console.log("📋 Normalized Orders:", orders);
-        return orders;
-    } catch (e) {
-        console.error("❌ Fetch Orders Error:", e.response?.data || e.message);
-        return [];
-    }
+        return normalizeList(res);
+    } catch (e) { return []; }
 };
 
 export const checkOrderStatus = async (phone) => {
     try {
         const inputPhone = String(phone).trim();
-        console.log("🔍 Searching for phone:", inputPhone);
-
-        // ပထမဆုံး order အားလုံး ယူမယ်၊ ပြီးမှ filter မယ်
         const res = await nocoApi.get(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, {
             params: { limit: 100 }
         });
 
-        console.log("🔍 Raw API Response:", res.data);
         const allOrders = normalizeList(res);
-        console.log("🔍 All Orders:", allOrders);
-
-        // Client-side filter လုပ်မယ်
         const cleanPhone = inputPhone.startsWith('0') ? inputPhone.substring(1) : inputPhone;
         const filteredOrders = allOrders.filter(order => {
             const orderPhone = String(order.phone || '').trim();
             return orderPhone.includes(cleanPhone) || orderPhone.includes(inputPhone);
         });
 
-        // ✅ နောက်ဆုံး order (id အကြီးဆုံး) ကို ပြအောင် sort descending
         const orders = filteredOrders.sort((a, b) => (b.id || 0) - (a.id || 0));
 
-        console.log("🔍 Filtered & Sorted Orders (latest first):", orders);
-
         if (orders.length > 0) {
-            const order = orders[0]; // ✅ နောက်ဆုံး order (id အကြီးဆုံး)
+            const order = orders[0];
             const currentStatus = String(order.status || '').toLowerCase().trim();
 
-            // ✅ Book info ယူမယ် (title နဲ့ download link)
             if (order.book_id) {
                 try {
                     const bookRes = await nocoApi.get(`/api/v2/tables/${BOOKS_TABLE_ID}/records/${order.book_id}`);
                     order.book_title = bookRes.data.title || 'Unknown Book';
-                    // completed ဖြစ်မှသာ download link ထည့်ပေးမည်
-                    if (currentStatus === 'completed') {
-                        order.download_url = bookRes.data.file_url;
-                    } else {
-                        order.download_url = null;
-                    }
+                    order.download_url = currentStatus === 'completed' ? bookRes.data.file_url : null;
                 } catch (err) {
                     order.book_title = 'Book #' + order.book_id;
-                    order.download_url = null;
                 }
-            } else {
-                order.book_title = 'N/A';
-                order.download_url = null;
             }
             return [order];
         }
         return [];
-    } catch (e) {
-        console.error("❌ Check Order Error:", e.response?.data || e.message);
-        return [];
-    }
+    } catch (e) { return []; }
 };
 
 export const updateOrderStatus = async (orderId, status) => {
     try {
-        console.log("🔄 Updating order:", orderId, "to status:", status);
-        // NocoDB PATCH - record တစ်ခုချင်း update
         const res = await nocoApi.patch(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, {
             id: orderId,
             status: status
         });
-        console.log("✅ Update response:", res.data);
         return res;
-    } catch (e) {
-        console.error("❌ Update Error:", e.response?.data || e.message);
-        throw e;
-    }
+    } catch (e) { throw e; }
 };
 
-// --- 4. Telegram Notification ---
-const sendTelegramNotification = async (message, photoUrl = null) => {
-    try {
-        if (photoUrl) {
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
-            await axios.post(url, {
-                chat_id: TELEGRAM_CHAT_ID,
-                photo: photoUrl,
-                caption: message,
-                parse_mode: 'HTML'
-            });
-        } else {
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-            await axios.post(url, {
-                chat_id: TELEGRAM_CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            });
-        }
-    } catch (error) {
-        console.error('Telegram Error:', error.message);
-    }
-};
-
+// --- 3. Submit Order (Modified for Telegram Buttons) ---
 export const submitOrder = async (orderData) => {
     try {
         let attachmentData = null;
         let screenshotUrl = null;
+
         if (orderData.screenshot) {
             const formData = new FormData();
             formData.append('file', orderData.screenshot);
@@ -163,9 +103,9 @@ export const submitOrder = async (orderData) => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             if (uploadRes.data?.[0]) {
-                attachmentData = [{ path: uploadRes.data[0].path }];
-                // Construct full URL for Telegram message if needed
-                screenshotUrl = `https://db.drtunmyatwin.com/${uploadRes.data[0].path}`;
+                const filePath = uploadRes.data[0].path;
+                attachmentData = JSON.stringify([{ path: filePath }]);
+                screenshotUrl = `${BASE_URL}/${filePath}`;
             }
         }
 
@@ -176,29 +116,45 @@ export const submitOrder = async (orderData) => {
             amount: orderData.amount,
             book_id: Number(orderData.book_id),
             screenshot: attachmentData,
-            status: 'pending' // Order တင်ခါစမှာ အမြဲ pending ဖြစ်ရမည်
+            status: 'pending'
         };
 
         const response = await nocoApi.post(`/api/v2/tables/${ORDERS_TABLE_ID}/records`, payload);
 
-        // Send Notification to Telegram Channel
         if (response.data) {
-            const msg = `<b>📦 New Order Received!</b>\n\n` +
-                `👤 <b>Name:</b> ${orderData.name}\n` +
-                `📱 <b>Phone:</b> ${orderData.phone}\n` +
-                `💰 <b>Amount:</b> ${orderData.amount} MMK\n` +
-                `💳 <b>Payment:</b> ${orderData.paymentMethod}\n` +
+            const orderId = response.data.Id || response.data.id;
+
+            const msg = `<b>📦 Order အသစ်ရောက်ရှိပါသည်။</b>\n\n` +
+                `👤 <b>အမည်:</b> ${orderData.name}\n` +
+                `📱 <b>ဖုန်း:</b> ${orderData.phone}\n` +
+                `💰 <b>ပမာဏ:</b> ${orderData.amount} MMK\n` +
+                `💳 <b>ငွေပေးချေမှု:</b> ${orderData.paymentMethod}\n` +
                 `📚 <b>Book ID:</b> ${orderData.book_id}`;
 
-            // Pass screenshotUrl to send photo
-            sendTelegramNotification(msg, screenshotUrl);
-        }
+            // Approve နှင့် Reject ခလုတ်များ
+            const reply_markup = {
+                inline_keyboard: [
+                    [
+                        { text: "✅ Approve", callback_data: `approve_${orderId}` },
+                        { text: "❌ Reject", callback_data: `reject_${orderId}` }
+                    ]
+                ]
+            };
 
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+            await axios.post(url, {
+                chat_id: TELEGRAM_CHAT_ID,
+                photo: screenshotUrl,
+                caption: msg,
+                parse_mode: 'HTML',
+                reply_markup: reply_markup
+            });
+        }
         return response;
     } catch (e) { throw e; }
 };
 
-// --- 3. Community ---
+// --- 4. Community ---
 export const fetchRequests = async () => {
     try {
         const res = await nocoApi.get(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, {
@@ -219,7 +175,6 @@ export const submitRequest = async (data) => {
 
     const response = await nocoApi.post(`/api/v2/tables/${REQUESTS_TABLE_ID}/records`, payload);
 
-    // Send Notification to Telegram Channel with Inline Button
     if (response) {
         const msg = `<b>🙋‍♂️ New Book Request!</b>\n\n` +
             `📚 <b>Title:</b> ${data.bookName}\n` +
@@ -233,18 +188,11 @@ export const submitRequest = async (data) => {
                 text: msg,
                 parse_mode: 'HTML',
                 reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: "🗳 Vote on Website", url: "https://shop.drtunmyatwin.com/community" }
-                        ]
-                    ]
+                    inline_keyboard: [[{ text: "🗳 Vote on Website", url: "https://shop.drtunmyatwin.com/community" }]]
                 }
             });
-        } catch (error) {
-            console.error('Telegram Request Notification Error:', error.message);
-        }
+        } catch (error) {}
     }
-
     return response;
 };
 
